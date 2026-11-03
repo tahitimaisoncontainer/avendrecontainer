@@ -1210,10 +1210,25 @@ function closeLegalModal(){ document.getElementById('legalModalOverlay').classLi
 function closeLegalModalOutside(e){ if(e.target===document.getElementById('legalModalOverlay')) closeLegalModal(); }
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeLegalModal();}});
 function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.classList.toggle('toast-error',isError);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),5500);}
+
+/* Client feedback is submitted explicitly; opening a link never sends a response. */
+function devisResponseLink(d,choice){
+  const context={ref:String(d.devis_num||''),nom:String(d.client_nom||''),email:String(d.client_email||d.email||''),tel:String(d.client_tel||''),produit:activeProduct==='40'?'40 HC':'20 DRY',quantite:String(d.quantite||''),commune:String(d.commune||'')};
+  const bytes=new TextEncoder().encode(JSON.stringify(context));
+  let binary='';bytes.forEach(b=>binary+=String.fromCharCode(b));
+  const payload=btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  return 'https://tahitimaisoncontainer.github.io/avendrecontainer/reponse-devis.html#choix='+encodeURIComponent(choice)+'&d='+payload;
+}
+function devisResponseButtons(d){
+  const options=[['interesse','Intéressé','#397d46'],['question',"J’ai une question",'#e56535'],['non','Pas intéressé','#4c5563']];
+  return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;"><tr><td style="padding:18px;font-family:Arial,sans-serif;color:#1a1e28;"><h3 style="margin:0 0 12px;font-size:17px;">Quelle suite souhaitez-vous donner à ce devis ?</h3>'+options.map(o=>'<p style="margin:8px 0;"><a href="'+devisResponseLink(d,o[0])+'" style="display:block;padding:13px 16px;background:'+o[2]+';color:#fff;text-decoration:none;text-align:center;border-radius:7px;font-size:15px;font-weight:bold;">'+o[1]+'</a></p>').join('')+'<p style="margin:12px 0 0;font-size:12px;line-height:1.5;color:#64748b;">Choisissez une réponse, puis validez sur la page qui s’ouvre. « Intéressé » indique votre souhait de poursuivre et ne vaut pas signature du devis.</p></td></tr></table>';
+}
+
 function sendEmail(){
   const sb=document.getElementById('sendBtn'),lb=document.getElementById('sendBtnLabel');
   lb.innerHTML='<span class="spinner"></span>Envoi en cours...';sb.style.opacity='0.7';sb.style.pointerEvents='none';
-  emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,currentData).then(()=>{
+  const emailData={...currentData,detail_html:currentData.detail_html+devisResponseButtons(currentData)};
+  emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,emailData).then(()=>{
     lb.textContent='✓ Envoyé avec succès !';sb.style.background='linear-gradient(135deg,#3daf5c,#6fcb7d)';
     devisCounter++;
     // Téléchargement PDF selon le navigateur
